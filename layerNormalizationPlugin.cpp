@@ -91,7 +91,7 @@ int LayerNormalizationPlugin::enqueue(const nvinfer1::PluginTensorDesc* inputDes
 {
     // Get the input dimensions
     nvinfer1::Dims input_dims = inputDesc[0].dims;
-    int need_size = std::accumulate(input_dims.d, input_dims.d + inputDesc[0].dims.nbDims - 1, 1, std::multiplies<int>());
+    int need_size = std::accumulate(input_dims.d, input_dims.d + input_dims.nbDims - 1, 1, std::multiplies<int>());
     bool use_fp16 = inputDesc[0].type == DataType::kHALF;
     bool use_fp32 = inputDesc[0].type == DataType::kFLOAT;
 
@@ -179,7 +179,7 @@ void LayerNormalizationPlugin::configurePlugin(const nvinfer1::DynamicPluginTens
     const nvinfer1::DynamicPluginTensorDesc* out, int nbOutputs) noexcept
 {
     nvinfer1::Dims input_dims = in[0].desc.dims;
-    int need_size = std::accumulate(input_dims.d, input_dims.d + inputDesc[0].dims.nbDims - 1, 1, std::multiplies<int>());
+    int need_size = std::accumulate(input_dims.d, input_dims.d + input_dims.nbDims - 1, 1, std::multiplies<int>());
     
     if(mean_len < need_size) {
         if(mean != nullptr) {
