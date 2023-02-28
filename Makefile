@@ -1,7 +1,7 @@
 CUDA_PATH   = /usr/local/cuda
 NVCC        = $(CUDA_PATH)/bin/nvcc
 TRT_PATH    = /usr/lib/x86_64-linux-gnu
-SM          = 75
+SM          = 86
 CCFLAG      = -std=c++14 -DNDEBUG -O3 -gencode=arch=compute_$(SM),code=sm_$(SM)
 SOFLAG      = $(CCFLAG) -shared
 INCLUDE     = -I. -I$(CUDA_PATH)/include -I$(TRT_PATH)/include

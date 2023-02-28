@@ -91,14 +91,12 @@ int LayerNormalizationPlugin::enqueue(const nvinfer1::PluginTensorDesc* inputDes
 {
     // Get the input dimensions
     nvinfer1::Dims input_dims = inputDesc[0].dims;
-    int batchSize = input_dims.d[0];
-    int nbChannels = input_dims.d[1];
+    int need_size = std::accumulate(input_dims.d, input_dims.d + inputDesc[0].dims.nbDims - 1, 1, std::multiplies<int>());
     bool use_fp16 = inputDesc[0].type == DataType::kHALF;
     bool use_fp32 = inputDesc[0].type == DataType::kFLOAT;
 
-    mChannelVolume = std::accumulate(input_dims.d + 2, input_dims.d + inputDesc[0].dims.nbDims, 1, std::multiplies<int>());
+    mChannelVolume = input_dims.d[inputDesc[0].dims.nbDims-1];
     
-    int need_size = batchSize * nbChannels;
     if(mean_len < need_size) {
         if(mean != nullptr) {
             cudaFree(mean);
@@ -117,13 +115,13 @@ int LayerNormalizationPlugin::enqueue(const nvinfer1::PluginTensorDesc* inputDes
     }
 
     if(use_fp16) {
-        LayerNormForwardGpu(stream, batchSize * nbChannels, mChannelVolume,
+        LayerNormForwardGpu(stream, need_size, mChannelVolume,
                         mEpsilon, reinterpret_cast<const __half*>(inputs[0]), reinterpret_cast<const __half*>(inputs[1]),
                         reinterpret_cast<const __half*>(inputs[2]), reinterpret_cast<__half*>(outputs[0]), mean,
                         inv_variance);
 
     } else if(use_fp32) {
-        LayerNormForwardGpu(stream, batchSize * nbChannels, mChannelVolume,
+        LayerNormForwardGpu(stream, need_size, mChannelVolume,
                         mEpsilon, reinterpret_cast<const float*>(inputs[0]), reinterpret_cast<const float*>(inputs[1]),
                         reinterpret_cast<const float*>(inputs[2]), reinterpret_cast<float*>(outputs[0]),mean,
                         inv_variance);        
@@ -180,11 +178,9 @@ IPluginV2DynamicExt* LayerNormalizationPlugin::clone() const noexcept
 void LayerNormalizationPlugin::configurePlugin(const nvinfer1::DynamicPluginTensorDesc* in, int nbInputs,
     const nvinfer1::DynamicPluginTensorDesc* out, int nbOutputs) noexcept
 {
-    int batchSize = in[0].desc.dims.d[0] < 0 ? 256 : in[0].desc.dims.d[0];
-    int nbChannels = in[0].desc.dims.d[1] < 0 ? 256 : in[0].desc.dims.d[1];
-
-    // Allocate device memory and initialize scale and bias values
-    int need_size = batchSize * nbChannels;
+    nvinfer1::Dims input_dims = in[0].desc.dims;
+    int need_size = std::accumulate(input_dims.d, input_dims.d + inputDesc[0].dims.nbDims - 1, 1, std::multiplies<int>());
+    
     if(mean_len < need_size) {
         if(mean != nullptr) {
             cudaFree(mean);
